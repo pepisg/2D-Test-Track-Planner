@@ -28,6 +28,7 @@ from rclpy.node import Node
 from utils.python_utils import printlog
 from utils.python_utils import print_list_text
 
+from std_msgs.msg import Int32
 from usr_msgs.msg import Planner as planner_msg
 from usr_msgs.msg import Kiwibot as kiwibot_msg
 
@@ -81,11 +82,13 @@ class VisualsNode(Thread, Node):
         # Subscribers
 
         self.msg_planner = planner_msg()
-        # TODO: Implement the path planner status subscriber,
-        # topic name: "/path_planner/msg"
-        # message type: planner_msg
-        # callback:cb_path_planner
-        # add here your solution
+        self.sub_planner = self.create_subscription(
+            msg_type=planner_msg,
+            topic="/path_planner/msg",
+            callback=self.cb_path_planner,
+            qos_profile=qos_profile_sensor_data,
+            callback_group=self.callback_group,
+        )
 
         # ------------------------------------------
         # TODO: Implement the Kiwibot status subscriber,
@@ -100,20 +103,21 @@ class VisualsNode(Thread, Node):
         self.turn_robot(heading_angle=float(os.getenv("BOT_INITIAL_YAW", default=0.0)))
         self.msg_kiwibot.pos_x = int(os.getenv("BOT_INITIAL_X", default=917))
         self.msg_kiwibot.pos_y = int(os.getenv("BOT_INITIAL_Y", default=1047))
+        printlog(msg="hello", msg_type="ERROR")
 
         # ---------------------------------------------------------------------
         # Publishers
 
         # Uncomment
         # Publisher for activating the rear cam streaming
-        # self.msg_path_number = Int32()
-        # self.pub_start_routine = self.create_publisher(
-        #     msg_type=Int32,
-        #     topic="/graphics/start_routine",
-        #     qos_profile=1,
-        #     callback_group=self.callback_group,
-        # )
-
+        self.msg_path_number = Int32()
+        self.pub_start_routine = self.create_publisher(
+            msg_type=Int32,
+            topic="/graphics/start_routine",
+            qos_profile=1,
+            callback_group=self.callback_group,
+        )
+        printlog(msg="hello2", msg_type="ERROR")
         # ---------------------------------------------------------------------
         self.damon = True
         self.run_event = Event()
@@ -145,8 +149,8 @@ class VisualsNode(Thread, Node):
             self.turn_robot(
                 heading_angle=float(os.getenv("BOT_INITIAL_YAW", default=0.0))
             )
-            self.draw_descriptors(self.msg_planner.land_marks)
 
+            self.draw_descriptors(self.msg_planner.land_marks)
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -410,7 +414,15 @@ class VisualsNode(Thread, Node):
 
         # -----------------------------------------
         # Insert you solution here
-        pass
+        for land_mark in land_marks:
+            printlog(msg=str(land_mark.x), msg_type="ERROR")
+            cv2.circle(
+                img=self._win_background,
+                center=(land_mark.x, land_mark.y),
+                radius=15,
+                color=(0, 0, 255),
+                thickness=5,
+            )
 
         # -----------------------------------------
 
@@ -452,11 +464,11 @@ class VisualsNode(Thread, Node):
                     continue
                 # Key1=1048633 & Key9=1048625
                 elif key >= 48 and key <= 57:
-                    printlog(
-                        msg=f"Code is broken here",
-                        msg_type="WARN",
-                    )
-                    continue  # remove this line
+                    # printlog(
+                    #     msg=f"Code is broken here",
+                    #     msg_type="WARN",
+                    # )
+                    # continue  # remove this line
                     printlog(
                         msg=f"Routine {chr(key)} was sent to path planner node",
                         msg_type="INFO",
