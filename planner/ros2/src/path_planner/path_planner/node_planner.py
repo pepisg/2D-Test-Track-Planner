@@ -471,7 +471,8 @@ class PlannerNode(Node):
 
         way_points = []
 
-        if time == 0.0 or pt == 0:
+        if time == 0.0 or pt == 0 or pt > 0.5:
+            printlog(msg="invalid parameters", msg_type="ERROR")
             pass
         else:
             delta_pos = [0, 0]
@@ -491,14 +492,15 @@ class PlannerNode(Node):
             final_accelerated_time = 0
             final_const_pos = [0, 0]
             final_const_time = 0
+            # formulas from the kinematic equation x(t) = x0 + v*t + 1/2 a*t**2
             for i in range(int(n)):
                 current_time += dt
-                if i <= n * pt:
+                if (i + 1) <= n * pt:
                     current_pos[0] = src[0] + 0.5 * acceleration[0] * current_time ** 2
                     current_pos[1] = src[1] + 0.5 * acceleration[1] * current_time ** 2
                     final_accelerated_pos = copy.copy(current_pos)
-                    final_accelerated_time = current_time
-                elif n * pt < i < (1 - pt) * n:
+                    final_accelerated_time = copy.copy(current_time)
+                elif n * pt < (i + 1) <= (1 - pt) * n:
                     current_pos[0] = final_accelerated_pos[0] + vel_max[0] * (
                         current_time - final_accelerated_time
                     )
@@ -506,7 +508,7 @@ class PlannerNode(Node):
                         current_time - final_accelerated_time
                     )
                     final_const_pos = copy.copy(current_pos)
-                    final_const_time = current_time
+                    final_const_time = copy.copy(current_time)
                 else:
                     current_pos[0] = (
                         final_const_pos[0]
@@ -538,7 +540,7 @@ class PlannerNode(Node):
         # Do not forget and respect the keys names
 
         # ---------------------------------------------------------------------
-        printlog(way_points)
+        # printlog(way_points)
         return way_points
 
     def get_profile_turn(self, dst: float, time: float, pt=0.3, n=30) -> list:
@@ -561,8 +563,59 @@ class PlannerNode(Node):
         """
 
         turn_points = []
-        if dst == 0.0:
+        if dst == 0.0 or pt == 0:
             return turn_points
+        else:
+            delta_yaw = dst
+            current_yaw = 0
+            omega_max = delta_yaw / ((1 - pt) * time)
+            acc_time = pt * time
+            acceleration = omega_max / acc_time
+            dt = time / n
+            current_time = 0
+            final_accelerated_yaw = 0
+            final_accelerated_time = 0
+            final_const_yaw = 0
+            final_const_time = 0
+            for i in range(int(n)):
+                current_time += dt
+                if (i + 1) <= n * pt:
+                    current_yaw = 0.5 * acceleration * current_time ** 2
+                    final_accelerated_yaw = copy.copy(current_yaw)
+                    final_accelerated_time = copy.copy(current_time)
+                elif n * pt < (i + 1) <= (1 - pt) * n:
+                    current_yaw = final_accelerated_yaw + omega_max * (
+                        current_time - final_accelerated_time
+                    )
+                    final_const_yaw = copy.copy(current_yaw)
+                    final_const_time = copy.copy(current_time)
+                else:
+                    if pt == 0.5:
+                        final_const_time = final_accelerated_time
+                        final_const_yaw = final_accelerated_yaw
+                    printlog(current_time - final_const_time)
+                    current_yaw = (
+                        final_const_yaw
+                        + omega_max * (current_time - final_const_time)
+                        - 0.5 * acceleration * (current_time - final_const_time) ** 2
+                    )
+
+                turn_points.append(
+                    {
+                        "idx": i + 1,
+                        "a": current_yaw,
+                        "t": current_time,
+                        "dt": dt,
+                    }
+                )
+                printlog(
+                    {
+                        "idx": i + 1,
+                        "a": current_yaw,
+                        "t": current_time,
+                        "dt": dt,
+                    }
+                )
 
         # ---------------------------------------------------------------------
         # TODO: Trapezoidal turn profile
