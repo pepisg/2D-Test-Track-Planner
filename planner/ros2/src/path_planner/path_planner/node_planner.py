@@ -13,6 +13,8 @@ import yaml
 import csv
 import sys
 import os
+from time import sleep
+import copy
 
 import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -469,6 +471,62 @@ class PlannerNode(Node):
 
         way_points = []
 
+        if time == 0.0 or pt == 0:
+            pass
+        else:
+            delta_pos = [0, 0]
+            vel_max = [0, 0]
+            current_pos = [src[0], src[1]]
+            acceleration = [0, 0]
+            delta_pos[0] = dst[0] - src[0]
+            delta_pos[1] = dst[1] - src[1]
+            vel_max[0] = delta_pos[0] / ((1 - pt) * time)
+            vel_max[1] = delta_pos[1] / ((1 - pt) * time)
+            acc_time = pt * time
+            acceleration[0] = vel_max[0] / acc_time
+            acceleration[1] = vel_max[1] / acc_time
+            dt = time / n
+            current_time = 0
+            final_accelerated_pos = [0, 0]
+            final_accelerated_time = 0
+            final_const_pos = [0, 0]
+            final_const_time = 0
+            for i in range(int(n)):
+                current_time += dt
+                if i <= n * pt:
+                    current_pos[0] = src[0] + 0.5 * acceleration[0] * current_time ** 2
+                    current_pos[1] = src[1] + 0.5 * acceleration[1] * current_time ** 2
+                    final_accelerated_pos = copy.copy(current_pos)
+                    final_accelerated_time = current_time
+                elif n * pt < i < (1 - pt) * n:
+                    current_pos[0] = final_accelerated_pos[0] + vel_max[0] * (
+                        current_time - final_accelerated_time
+                    )
+                    current_pos[1] = final_accelerated_pos[1] + vel_max[1] * (
+                        current_time - final_accelerated_time
+                    )
+                    final_const_pos = copy.copy(current_pos)
+                    final_const_time = current_time
+                else:
+                    current_pos[0] = (
+                        final_const_pos[0]
+                        + vel_max[0] * (current_time - final_const_time)
+                        - 0.5 * acceleration[0] * (current_time - final_const_time) ** 2
+                    )
+                    current_pos[1] = (
+                        final_const_pos[1]
+                        + vel_max[1] * (current_time - final_const_time)
+                        - 0.5 * acceleration[1] * (current_time - final_const_time) ** 2
+                    )
+                way_points.append(
+                    {
+                        "idx": i + 1,
+                        "pt": tuple(current_pos),
+                        "t": current_time,
+                        "dt": dt,
+                    }
+                )
+
         # ---------------------------------------------------------------------
         # TODO: Trapezoidal speed profile
         # Add your solution here, remeber that every element in the list is a dictionary
@@ -480,7 +538,7 @@ class PlannerNode(Node):
         # Do not forget and respect the keys names
 
         # ---------------------------------------------------------------------
-
+        printlog(way_points)
         return way_points
 
     def get_profile_turn(self, dst: float, time: float, pt=0.3, n=30) -> list:

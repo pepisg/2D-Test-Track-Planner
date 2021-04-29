@@ -27,6 +27,7 @@ from rclpy.node import Node
 
 from utils.python_utils import printlog
 from utils.python_utils import print_list_text
+from utils.python_utils import overlay_image
 
 from std_msgs.msg import Int32
 from usr_msgs.msg import Planner as planner_msg
@@ -91,12 +92,14 @@ class VisualsNode(Thread, Node):
         )
 
         # ------------------------------------------
-        # TODO: Implement the Kiwibot status subscriber,
-        # topic name: "/kiwibot/status"
-        # message type: kiwibot_msg
-        # callback:cb_kiwibot_status
-        # add here your solution
         self.msg_kiwibot = kiwibot_msg()
+        self.sub_kiwibot_stat = self.create_subscription(
+            msg_type=kiwibot_msg,
+            topic="/kiwibot/status",
+            callback=self.cb_kiwibot_status,
+            qos_profile=qos_profile_sensor_data,
+            callback_group=self.callback_group,
+        )
 
         # ------------------------------------------
 
@@ -327,6 +330,7 @@ class VisualsNode(Thread, Node):
         Returns:
             _: Image with robot drawn
         """
+        l_img = overlay_image(l_img, s_img, pos, transparency, src_center=True)
 
         # -----------------------------------------
         # Insert you solution here
@@ -350,10 +354,10 @@ class VisualsNode(Thread, Node):
         win_img, robot_coord = self.crop_map(coord=coord)
 
         # Draws robot in maps image
-        # if coord[0] and coord[1]:
-        # win_img = self.draw_robot(
-        #     l_img=win_img, s_img=self._kiwibot_img, pos=robot_coord
-        # )
+        if coord[0] and coord[1]:
+            win_img = self.draw_robot(
+                l_img=win_img, s_img=self._kiwibot_img, pos=robot_coord
+            )
 
         # Draw descriptions
         str_list = [

@@ -8,7 +8,7 @@ export TURN_TIME=2.0               # [int][sec] time to perform a turn
 
 export FORWARE_ACELERATION_FC=0.3   # [float] deceleration/acceleration factor in speed profile
 export FORWARE_CRTL_POINTS=100      # [int] control points to discrite the trajectory in speed profile
-export FORWARE_PRINT_WAYPOINT=0     # [bool] 1: Enable/ 0: Disable control points to discrite the trajectory in speed profile
+export FORWARE_PRINT_WAYPOINT=1     # [bool] 1: Enable/ 0: Disable control points to discrite the trajectory in speed profile
 
 export BOT_INITIAL_YAW=90            # [float][degress] robots yaw angle
 export BOT_INITIAL_X=917            # [int][pixels] x axis initial coordinate
