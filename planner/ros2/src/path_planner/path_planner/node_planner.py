@@ -269,17 +269,6 @@ class PlannerNode(Node):
                 ]
                 move_resp = self.cli_robot_move.call(self.robot_move_req)
 
-                # self.robot_turn_req.turn_ref = [
-                #     TurnRef(
-                #         id=0,
-                #         yaw=-90.0 * i,
-                #         t=0.0,
-                #         dt=0.0,
-                #     )
-                #     for i in range(2)
-                # ]
-                # turn_resp = self.cli_robot_turn.call(self.robot_turn_req)
-
                 # -------------------------------------------------------
                 # Execute planning process
                 self.pub_speaker.publish(Int8(data=2))

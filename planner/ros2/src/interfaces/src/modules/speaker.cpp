@@ -34,6 +34,10 @@ Speaker::Speaker(rclcpp::NodeOptions &options) : Node("speaker", "interfaces", o
    ********************************************/
     m_speaker_sub = this->create_subscription<std_msgs::msg::Int8>(
       "/device/speaker/command", default_qos, std::bind(&Speaker::speakerCb, this, _1));
+    r_pause_sub = this->create_subscription<std_msgs::msg::Bool>(
+      "/graphics/pause_routine", default_qos, std::bind(&Speaker::pauseCb, this, _1));
+    r_cancel_sub = this->create_subscription<std_msgs::msg::Bool>(
+      "/graphics/cancel_routine", default_qos, std::bind(&Speaker::cancelCb, this, _1));
     
    /********************************************
     * END CODE 
@@ -124,6 +128,19 @@ void Speaker::speakerCb(const std_msgs::msg::Int8::SharedPtr msg)
     }
 }
 
+void Speaker::pauseCb(const std_msgs::msg::Bool::SharedPtr msg){
+    RCLCPP_INFO(this->get_logger(), "pause_msg");
+    if(msg->data){
+        m_multi_sound = 0;
+    }else{
+        m_multi_sound = 1;
+    }
+}
+void Speaker::cancelCb(const std_msgs::msg::Bool::SharedPtr msg){
+    RCLCPP_INFO(this->get_logger(), "cancel_msg");
+    restart_ambient = true;
+}
+
 void *Speaker::PlaySound()
 {
     if (readfd < 0)
@@ -192,6 +209,10 @@ void *Speaker::AmbientSound()
             {
                 if (m_multi_sound)
                 {
+                    if(restart_ambient){
+                        restart_ambient = false;
+                        break;
+                    }
                     if (pcm = snd_pcm_writei(pcm_handle, buff_ambient, frames) == -EPIPE)
                     {
                         snd_pcm_prepare(pcm_handle);

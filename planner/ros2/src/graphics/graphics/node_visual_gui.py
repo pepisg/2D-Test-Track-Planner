@@ -134,12 +134,14 @@ class VisualsNode(Thread, Node):
             callback_group=self.callback_group,
         )
 
-        # ---------------------------------------------------------------------
-        # services
+        self.msg_pause_routine = Bool()
+        self.pub_pause_routine = self.create_publisher(
+            msg_type=Bool,
+            topic="/graphics/pause_routine",
+            qos_profile=1,
+            callback_group=self.callback_group,
+        )
 
-        # service for pausing the routine
-        self.pause_routine_req = SetBool.Request()
-        self.cli_pause_routine = self.create_client(SetBool, "/robot/pause_routine")
         # ---------------------------------------------------------------------
         self.damon = True
         self.run_event = Event()
@@ -476,6 +478,19 @@ class VisualsNode(Thread, Node):
                         thickness=1,
                         fontScale=0.8,
                     )
+                elif self.msg_pause_routine.data:
+                    print_list_text(
+                        win_img,
+                        ["press SPACE again to resume"],
+                        origin=(
+                            win_img.shape[1] - 550,
+                            int(win_img.shape[0] * 0.95),
+                        ),
+                        color=(0, 0, 255),
+                        line_break=20,
+                        thickness=1,
+                        fontScale=0.8,
+                    )
                 else:
                     print_list_text(
                         win_img,
@@ -509,10 +524,14 @@ class VisualsNode(Thread, Node):
                         msg_type="INFO",
                     )
                     self.pub_start_routine.publish(Int32(data=int(chr(key))))
-                elif key == 32:
-                    self.pause_routine_req.data = not self.pause_routine_req.data
-                    self.cli_pause_routine.call(self.pause_routine_req)
-                elif key == 99:
+                elif key == 32 and self.msg_kiwibot.moving:
+                    self.msg_pause_routine.data = not self.msg_pause_routine.data
+                    self.pub_pause_routine.publish(self.msg_pause_routine)
+                elif (
+                    key == 99
+                    and self.msg_kiwibot.moving
+                    and not self.msg_pause_routine.data
+                ):
                     self.msg_cancel_routine.data = True
                     self.pub_cancel_routine.publish(self.msg_cancel_routine)
                 else:

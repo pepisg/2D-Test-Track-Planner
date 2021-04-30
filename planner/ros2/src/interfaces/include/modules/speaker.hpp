@@ -52,6 +52,8 @@ public:
        the track-sound to play
     */
     void speakerCb(const std_msgs::msg::Int8::SharedPtr _msg);
+    void pauseCb(const std_msgs::msg::Bool::SharedPtr msg);
+    void cancelCb(const std_msgs::msg::Bool::SharedPtr msg);
 
 
     /*!
@@ -72,7 +74,10 @@ private:
     /********************************************
     * USE THIS AMAZING SUBSCRIBER
     ********************************************/
+
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr m_speaker_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr r_pause_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr r_cancel_sub;
 
 
 
@@ -122,6 +127,7 @@ private:
     int ambient = 0;
     int m_pause = 0;
     int m_multi_sound = 1;
+    bool restart_ambient = false;
     /* Thread to play the sound */
     pthread_t pthread_id;
     pthread_t pthread_id_ambient;

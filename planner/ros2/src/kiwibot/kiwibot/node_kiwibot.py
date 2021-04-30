@@ -113,6 +113,15 @@ class KiwibotNode(Node):
             callback_group=self.callback_group,
         )
 
+        self.is_paused = False
+        self.sub_pause_routine = self.create_subscription(
+            msg_type=Bool,
+            topic="/graphics/pause_routine",
+            callback=self.cb_pause_routine,
+            qos_profile=qos_profile_sensor_data,
+            callback_group=self.callback_group,
+        )
+
         # ---------------------------------------------------------------------
         # Services
 
@@ -129,14 +138,6 @@ class KiwibotNode(Node):
             Move,
             "/robot/move",
             self.cb_srv_robot_move,
-            callback_group=self.callback_group,
-        )
-
-        self.is_paused = False
-        self.srv_pause_routine = self.create_service(
-            SetBool,
-            "/robot/pause_routine",
-            self.cb_pause_routine,
             callback_group=self.callback_group,
         )
 
@@ -265,12 +266,9 @@ class KiwibotNode(Node):
 
         return response
 
-    def cb_pause_routine(self, request, response) -> SetBool:
+    def cb_pause_routine(self, msg) -> None:
         printlog("space button")
-        self.is_paused = copy.copy(request.data)
-        response.success = True
-        response.message = "ok"
-        return response
+        self.is_paused = copy.copy(msg.data)
 
     def cb_cancel_routine(self, msg) -> None:
         printlog("c button")
