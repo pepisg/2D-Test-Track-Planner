@@ -294,6 +294,7 @@ RUN \
 
 # -----------------------------------------------------------------------------
 # Switch back to dialog for any ad-hoc use of apt-get
+RUN echo "source /opt/ros/foxy/setup.sh" >> /home/ada/.bashrc
 ENV DEBIAN_FRONTEND=
 CMD ["/bin/bash"]
 
