@@ -33,7 +33,7 @@ Speaker::Speaker(rclcpp::NodeOptions &options) : Node("speaker", "interfaces", o
     * https://docs.ros.org/en/foxy/Tutorials/Writing-A-Simple-Cpp-Publisher-And-Subscriber.html#write-the-subscriber-node
    ********************************************/
     m_speaker_sub = this->create_subscription<std_msgs::msg::Int8>(
-      "track", default_qos, std::bind(&Speaker::speakerCb, this, _1));
+      "/device/speaker/command", default_qos, std::bind(&Speaker::speakerCb, this, _1));
     
    /********************************************
     * END CODE 
@@ -103,6 +103,9 @@ void Speaker::speakerCb(const std_msgs::msg::Int8::SharedPtr msg)
         {
             readfd = open((m_path + std::to_string(msg->data) + ".wav").c_str(), O_RDONLY);
             status = pthread_create(&pthread_id, NULL, (THREADFUNCPTR)&Speaker::PlaySound, this);
+        }else{
+            readfd = open((m_path + "2" + ".wav").c_str(), O_RDONLY);
+            status = pthread_create(&pthread_id, NULL, (THREADFUNCPTR)&Speaker::PlaySound, this);
         }
         /********************************************
         * PLAY A DEFAULT SOUND IF NOT FOUND THE TRACK FILE
@@ -137,6 +140,7 @@ void *Speaker::PlaySound()
     * https://docs.ros.org/en/foxy/Tutorials/Writing-A-Simple-Cpp-Publisher-And-Subscriber.html#write-the-publisher-node
     ********************************************/
     std_msgs::msg::Bool::UniquePtr msg(new std_msgs::msg::Bool());
+    Speaker::m_done_pub->publish(std::move(msg));
 
    /********************************************
     * END CODE 
@@ -164,6 +168,8 @@ void *Speaker::PlaySound()
     ********************************************/
     // This is just for clean the variable name and re-initialize it.
     msg.reset(new std_msgs::msg::Bool());
+    msg->data = true;
+    Speaker::m_done_pub->publish(std::move(msg));
     
    /********************************************
     * END CODE 
