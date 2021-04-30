@@ -274,7 +274,6 @@ class PlannerNode(Node):
                 self.pub_speaker.publish(Int8(data=2))
                 for idx, way_point in enumerate(self.way_points["coords"][:-1]):
                     if self.is_cancelled:
-                        self.is_cancelled = False
                         break
                     # -------------------------------------------------------
                     # Calculate the angle to turn the robot
@@ -325,7 +324,6 @@ class PlannerNode(Node):
 
                     # -------------------------------------------------------
                     if self.is_cancelled:
-                        self.is_cancelled = False
                         break
 
                     printlog(
@@ -369,7 +367,10 @@ class PlannerNode(Node):
                     )
 
                 # -------------------------------------------------------
-                self.pub_speaker.publish(Int8(data=3))
+                if self.is_cancelled:
+                    self.is_cancelled = False
+                else:
+                    self.pub_speaker.publish(Int8(data=3))
 
             else:
                 printlog(

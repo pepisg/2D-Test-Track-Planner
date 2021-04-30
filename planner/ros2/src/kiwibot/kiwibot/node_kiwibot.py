@@ -239,7 +239,6 @@ class KiwibotNode(Node):
                 self.status.time += wp.dt
 
                 if self.is_cancelled:
-                    self.is_cancelled = False
                     self.is_paused = False
                     self.status.yaw = 90.0
                     self.pub_bot_status.publish(self.status)
@@ -252,7 +251,10 @@ class KiwibotNode(Node):
             self.status.speed = 0.0
             self.status.moving = False
             self.pub_bot_status.publish(self.status)
-            self.pub_speaker.publish(Int8(data=1))
+            if self.is_cancelled:
+                self.is_cancelled = False
+            else:
+                self.pub_speaker.publish(Int8(data=1))
             response.completed = True
 
         except Exception as e:
