@@ -8,6 +8,7 @@ Code Information:
 """
 
 # =============================================================================
+from typing import Set
 import numpy as np
 import cv2
 import copy
@@ -30,8 +31,13 @@ from utils.python_utils import print_list_text
 from utils.python_utils import overlay_image
 
 from std_msgs.msg import Int32
+from std_msgs.msg import Bool
 from usr_msgs.msg import Planner as planner_msg
 from usr_msgs.msg import Kiwibot as kiwibot_msg
+
+
+from std_srvs.srv import SetBool
+
 
 # =============================================================================
 def setProcessName(name: str) -> None:
@@ -106,7 +112,6 @@ class VisualsNode(Thread, Node):
         self.turn_robot(heading_angle=float(os.getenv("BOT_INITIAL_YAW", default=0.0)))
         self.msg_kiwibot.pos_x = int(os.getenv("BOT_INITIAL_X", default=917))
         self.msg_kiwibot.pos_y = int(os.getenv("BOT_INITIAL_Y", default=1047))
-        printlog(msg="hello", msg_type="ERROR")
 
         # ---------------------------------------------------------------------
         # Publishers
@@ -120,7 +125,21 @@ class VisualsNode(Thread, Node):
             qos_profile=1,
             callback_group=self.callback_group,
         )
-        printlog(msg="hello2", msg_type="ERROR")
+
+        self.msg_cancel_routine = Bool()
+        self.pub_cancel_routine = self.create_publisher(
+            msg_type=Bool,
+            topic="/graphics/cancel_routine",
+            qos_profile=1,
+            callback_group=self.callback_group,
+        )
+
+        # ---------------------------------------------------------------------
+        # services
+
+        # service for pausing the routine
+        self.pause_routine_req = SetBool.Request()
+        self.cli_pause_routine = self.create_client(SetBool, "/robot/pause_routine")
         # ---------------------------------------------------------------------
         self.damon = True
         self.run_event = Event()
@@ -419,7 +438,6 @@ class VisualsNode(Thread, Node):
         # -----------------------------------------
         # Insert you solution here
         for land_mark in land_marks:
-            printlog(msg=str(land_mark.x), msg_type="ERROR")
             cv2.circle(
                 img=self._win_background,
                 center=(land_mark.x, land_mark.y),
@@ -458,6 +476,19 @@ class VisualsNode(Thread, Node):
                         thickness=1,
                         fontScale=0.8,
                     )
+                else:
+                    print_list_text(
+                        win_img,
+                        ["press SPACE to pause or C to cancel"],
+                        origin=(
+                            win_img.shape[1] - 550,
+                            int(win_img.shape[0] * 0.95),
+                        ),
+                        color=(0, 0, 255),
+                        line_break=20,
+                        thickness=1,
+                        fontScale=0.8,
+                    )
 
                 # Update the images dictionary in the callback action
                 cv2.imshow(self._win_name, win_img)
@@ -478,6 +509,12 @@ class VisualsNode(Thread, Node):
                         msg_type="INFO",
                     )
                     self.pub_start_routine.publish(Int32(data=int(chr(key))))
+                elif key == 32:
+                    self.pause_routine_req.data = not self.pause_routine_req.data
+                    self.cli_pause_routine.call(self.pause_routine_req)
+                elif key == 99:
+                    self.msg_cancel_routine.data = True
+                    self.pub_cancel_routine.publish(self.msg_cancel_routine)
                 else:
                     printlog(
                         msg=f"No action for key {chr(key)} -> {key}",

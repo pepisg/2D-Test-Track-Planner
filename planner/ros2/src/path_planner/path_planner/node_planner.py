@@ -26,6 +26,8 @@ from rclpy.qos import qos_profile_sensor_data
 
 from std_msgs.msg import Int32
 from std_msgs.msg import Int8
+from std_msgs.msg import Bool
+
 
 from utils.python_utils import printlog
 
@@ -160,6 +162,15 @@ class PlannerNode(Node):
         # service client to move the robot
         self.cli_robot_move = self.create_client(Move, "/robot/move")
 
+        self.is_cancelled = False
+        self.sub_cancel_routine = self.create_subscription(
+            msg_type=Bool,
+            topic="/graphics/cancel_routine",
+            callback=self.cb_cancel_routine,
+            qos_profile=qos_profile_sensor_data,
+            callback_group=self.callback_group,
+        )
+
         try:
             self.robot_turn_req = Turn.Request()
             self.robot_move_req = Move.Request()
@@ -258,11 +269,24 @@ class PlannerNode(Node):
                 ]
                 move_resp = self.cli_robot_move.call(self.robot_move_req)
 
+                # self.robot_turn_req.turn_ref = [
+                #     TurnRef(
+                #         id=0,
+                #         yaw=-90.0 * i,
+                #         t=0.0,
+                #         dt=0.0,
+                #     )
+                #     for i in range(2)
+                # ]
+                # turn_resp = self.cli_robot_turn.call(self.robot_turn_req)
+
                 # -------------------------------------------------------
                 # Execute planning process
                 self.pub_speaker.publish(Int8(data=2))
                 for idx, way_point in enumerate(self.way_points["coords"][:-1]):
-
+                    if self.is_cancelled:
+                        self.is_cancelled = False
+                        break
                     # -------------------------------------------------------
                     # Calculate the angle to turn the robot
                     dy = (
@@ -311,6 +335,10 @@ class PlannerNode(Node):
                         move_resp = self.cli_robot_turn.call(self.robot_turn_req)
 
                     # -------------------------------------------------------
+                    if self.is_cancelled:
+                        self.is_cancelled = False
+                        break
+
                     printlog(
                         msg=f"moving robot to landmark {idx}",
                         msg_type="OKPURPLE",
@@ -370,6 +398,10 @@ class PlannerNode(Node):
             )
 
         self._in_execution = False
+
+    def cb_cancel_routine(self, msg) -> None:
+        printlog("c button")
+        self.is_cancelled = True
 
     def read_keypoints(self, land_marks_path: str, key_Points: list) -> list:
         """
@@ -593,7 +625,6 @@ class PlannerNode(Node):
                     if pt == 0.5:
                         final_const_time = final_accelerated_time
                         final_const_yaw = final_accelerated_yaw
-                    printlog(current_time - final_const_time)
                     current_yaw = (
                         final_const_yaw
                         + omega_max * (current_time - final_const_time)
@@ -608,15 +639,6 @@ class PlannerNode(Node):
                         "dt": dt,
                     }
                 )
-                printlog(
-                    {
-                        "idx": i + 1,
-                        "a": current_yaw,
-                        "t": current_time,
-                        "dt": dt,
-                    }
-                )
-
         # ---------------------------------------------------------------------
         # TODO: Trapezoidal turn profile
         # Add your solution here, remeber that every element in the list is a dictionary

@@ -11,6 +11,8 @@ Code Information:
 import time
 import sys
 import os
+from typing import Set
+import copy
 
 import numpy as np
 
@@ -23,8 +25,11 @@ from rclpy.node import Node
 
 from usr_srvs.srv import Move
 from usr_srvs.srv import Turn
+from std_srvs.srv import SetBool
+
 
 from std_msgs.msg import Int8
+from std_msgs.msg import Bool
 
 from usr_msgs.msg import Kiwibot as kiwibot_status
 
@@ -98,6 +103,16 @@ class KiwibotNode(Node):
             callback_group=self.callback_group,
         )
 
+        # Subscribers
+        self.is_cancelled = False
+        self.sub_cancel_routine = self.create_subscription(
+            msg_type=Bool,
+            topic="/graphics/cancel_routine",
+            callback=self.cb_cancel_routine,
+            qos_profile=qos_profile_sensor_data,
+            callback_group=self.callback_group,
+        )
+
         # ---------------------------------------------------------------------
         # Services
 
@@ -117,6 +132,14 @@ class KiwibotNode(Node):
             callback_group=self.callback_group,
         )
 
+        self.is_paused = False
+        self.srv_pause_routine = self.create_service(
+            SetBool,
+            "/robot/pause_routine",
+            self.cb_pause_routine,
+            callback_group=self.callback_group,
+        )
+
     def cb_srv_robot_turn(self, request, response) -> Turn:
         """
             Callback to update kiwibot state information when turning
@@ -128,10 +151,14 @@ class KiwibotNode(Node):
             response: `usr_srvs.srv._turn.Turn_Response` turning request
             successfully completed or not
         """
-
+        self.is_cancelled = False
         try:
 
             for idx, turn_ref in enumerate(request.turn_ref[:-1]):
+                while self.is_paused:
+                    time.sleep(0.05)
+                    if self.is_cancelled:
+                        break
 
                 if self._TURN_PRINT_WAYPOINT:
                     printlog(msg=turn_ref, msg_type="INFO")
@@ -145,6 +172,13 @@ class KiwibotNode(Node):
 
                 if self.status.yaw >= 360:
                     self.status.yaw += -360
+
+                if self.is_cancelled:
+                    self.is_cancelled = False
+                    self.is_paused = False
+                    self.status.yaw = 90.0
+                    self.pub_bot_status.publish(self.status)
+                    break
 
                 self.pub_bot_status.publish(self.status)
 
@@ -176,9 +210,13 @@ class KiwibotNode(Node):
             response: `usr_srvs.srv._move.Move_Response` Moving request
             successfully completed or not
         """
-
+        self.is_cancelled = False
         try:
             for wp in request.waypoints:
+                while self.is_paused:
+                    time.sleep(0.05)
+                    if self.is_cancelled:
+                        break
 
                 if self._FORWARE_PRINT_WAYPOINT:
                     printlog(msg=wp, msg_type="INFO")
@@ -198,6 +236,13 @@ class KiwibotNode(Node):
                 self.status.pos_y = wp.y
                 self.status.moving = True
                 self.status.time += wp.dt
+
+                if self.is_cancelled:
+                    self.is_cancelled = False
+                    self.is_paused = False
+                    self.status.yaw = 90.0
+                    self.pub_bot_status.publish(self.status)
+                    break
 
                 self.pub_bot_status.publish(self.status)
 
@@ -219,6 +264,17 @@ class KiwibotNode(Node):
             response.completed = False
 
         return response
+
+    def cb_pause_routine(self, request, response) -> SetBool:
+        printlog("space button")
+        self.is_paused = copy.copy(request.data)
+        response.success = True
+        response.message = "ok"
+        return response
+
+    def cb_cancel_routine(self, msg) -> None:
+        printlog("c button")
+        self.is_cancelled = True
 
 
 # =============================================================================
