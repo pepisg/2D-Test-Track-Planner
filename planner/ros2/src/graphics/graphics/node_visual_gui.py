@@ -14,6 +14,7 @@ import cv2
 import copy
 import sys
 import os
+import time
 
 from threading import Thread, Event
 
@@ -106,6 +107,7 @@ class VisualsNode(Thread, Node):
             qos_profile=qos_profile_sensor_data,
             callback_group=self.callback_group,
         )
+        self.yaw_changed = False
 
         # ------------------------------------------
 
@@ -199,16 +201,22 @@ class VisualsNode(Thread, Node):
         """
 
         try:
-            # rotate robot's image
+            # # rotate robot's image
+            # if self.msg_kiwibot.yaw != msg.yaw:
+            #     # if not int((msg.yaw - (msg.yaw)) * 100):
+            #     if True:
+            #         self._kiwibot_img = cv2.imread(
+            #             self._kiwibot_img_path, cv2.IMREAD_UNCHANGED
+            #         )
+            #         self.turn_robot(heading_angle=msg.yaw)
+            #     else:
+            #         move_angle = msg.yaw - self.msg_kiwibot.yaw
+            #         self.turn_robot(heading_angle=move_angle)
+
             if self.msg_kiwibot.yaw != msg.yaw:
-                if not int((msg.yaw - int(msg.yaw)) * 100):
-                    self._kiwibot_img = cv2.imread(
-                        self._kiwibot_img_path, cv2.IMREAD_UNCHANGED
-                    )
-                    self.turn_robot(heading_angle=msg.yaw)
-                else:
-                    move_angle = msg.yaw - self.msg_kiwibot.yaw
-                    self.turn_robot(heading_angle=move_angle)
+                self.yaw_changed = True
+            else:
+                self.yaw_changed = False
 
             self.msg_kiwibot = msg
 
@@ -321,10 +329,11 @@ class VisualsNode(Thread, Node):
 
         # Get image shape
         rows, cols, _ = self._kiwibot_img.shape
+        printlog("rotated image to angle" + str(heading_angle))
 
         # Calculate translation and rotation matrix
         M = cv2.getRotationMatrix2D(
-            center=(int(cols / 2), int(rows / 2)),
+            center=((cols) / 2.0, (rows) / 2.0),
             angle=(heading_angle),
             scale=1,
         )
@@ -373,6 +382,11 @@ class VisualsNode(Thread, Node):
 
         # Get a valid window where the robot is in the map
         win_img, robot_coord = self.crop_map(coord=coord)
+
+        # if not int((msg.yaw - (msg.yaw)) * 100):
+        if self.yaw_changed:
+            self._kiwibot_img = cv2.imread(self._kiwibot_img_path, cv2.IMREAD_UNCHANGED)
+            self.turn_robot(heading_angle=self.msg_kiwibot.yaw)
 
         # Draws robot in maps image
         if coord[0] and coord[1]:
