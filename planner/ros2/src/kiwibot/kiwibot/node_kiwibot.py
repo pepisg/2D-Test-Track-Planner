@@ -104,6 +104,7 @@ class KiwibotNode(Node):
         )
 
         # Subscribers
+        # Subscriber for cancelling routine
         self.is_cancelled = False
         self.sub_cancel_routine = self.create_subscription(
             msg_type=Bool,
@@ -112,7 +113,7 @@ class KiwibotNode(Node):
             qos_profile=qos_profile_sensor_data,
             callback_group=self.callback_group,
         )
-
+        # Subscriber for pausing the routine
         self.is_paused = False
         self.sub_pause_routine = self.create_subscription(
             msg_type=Bool,

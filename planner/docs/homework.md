@@ -161,21 +161,37 @@ Because this send to the process a SIGTERM signal that can be received and used 
 
 7. [C++] Why are we using UniquePointer instead of SharedPointers to publish a ROS2 message?
 
+Because they allow a more efficient memory management as the object doesn't have to be copied when going out of functions. Also, probably because thats the way the [documentation](https://docs.ros2.org/latest/api/rclcpp/classrclcpp_1_1Publisher.html#aace16d5f3e3c1c533fd0098602613a29) says it should be done!
+
 
 8. [C++] Why are we using a m_multi_sound variable? Explain ...
 
-To pause the reproduction of the ambient song when a different track is requested by an /device/speaker/command message. If this didn't happen the audio device would be forced to play two sounds at the same time, but this probably would not be possible as the computer has just one audio adapter (this could lead to unpredictable behavior or the computer exploding)
+To pause the reproduction of the ambient song when a different track is requested by an /device/speaker/command message. If this didn't happen the audio device would be forced to play two sounds at the same time, but this probably would not be possible as the computer has just one audio adapter (this could lead to unpredictable behavior or the computer exploding (just kidding)).
 
 9. [C++] Why are we freeing the memory allocated by raw pointer "buff" variable and not freeing the memory allocated by the Shared and Unique Pointers? (HARD)
 
+Because shared_ptr and unique_ptr are smart pointers, which means that they are automatically destroyed and their memory freed when they go out of scope (in the case of Unique pointers) or when all the references to the pointer are destroyed (for Shared pointers). Raw pointers have to be destroyed manually instead, and can lead more easily to memory leaks.
+
 10. [Docker] Explain with your own words what is the instructions `apt-get autoremove && apt-get clean -y for?`
+
+This instructions remove from the linux file system inside de docker container the files that are not longer needed: Files that where created during the installation process of a certain package but that are not longer used in its operation or files that were created for the operation of a package that does not longer exist. This reduces the overall size of the built docker container.
 
 11. [Docker] If you modify a layer what happen with the previous and the next ones?
 
+If the container is already built the layers are read only so they cannot be modified. If the layer is modified in the dockerfile prior to its execution, the previous layers would remain untouched (as layers are built one over the previous in succession), but the next ones could be corrupted or the building process could fail because dependencies could not be met.
+
 12. [Docker] Can we change the basic image (`FROM ubuntu:20.04`) from the docker file to another?
+
+You can change it, but the building process probably would not work. You shouldn't change it because all the subsequent commands depend on this parent image, and if you use a different one, like for instance ubuntu:16.04, the dependencies installed later could not be compatible with this other version of ubuntu (ros2 for example would be very troublesome), not to mention if you use a windows or a different OS image.
 
 Next questions is after you finish the project, it doesn't give points but we really appreciate you feedback:
 * What do you think about this project? is it hard or enough? is it to complicated, is it well structure, explanations and instructions are clear?
+
+It was a very interesting project. Thanks to the AI & Robotics team for the effort yo have put into it. I think the challenge is clear well structured, however I would suggest to create fewer but longer basic points containing the ones you propose, because sometimes to see if a point really worked you have to complete the next ones, and I think in this case it would be more appropriate to group the dependant tasks into a more compact unity. 
+
+I think the project is challenging, and its able to test the knowledge of the candidate in a lot of different fields. I think that it was also very valuable for me, as I personally had used ROS before only in the academy and its very interesting to interact with it as its used by a company who relies in this software for producing real robots.
+
+Thanks again for allowing me to participate! 
 
 ---
 <!-- ---------------------------------------------------------------------- -->

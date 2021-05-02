@@ -34,8 +34,10 @@ Speaker::Speaker(rclcpp::NodeOptions &options) : Node("speaker", "interfaces", o
    ********************************************/
     m_speaker_sub = this->create_subscription<std_msgs::msg::Int8>(
       "/device/speaker/command", default_qos, std::bind(&Speaker::speakerCb, this, _1));
+    // Subscriber for pausing audio
     r_pause_sub = this->create_subscription<std_msgs::msg::Bool>(
       "/graphics/pause_routine", default_qos, std::bind(&Speaker::pauseCb, this, _1));
+    // Subscriber for restarting audio
     r_cancel_sub = this->create_subscription<std_msgs::msg::Bool>(
       "/graphics/cancel_routine", default_qos, std::bind(&Speaker::cancelCb, this, _1));
     

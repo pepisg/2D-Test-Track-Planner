@@ -114,6 +114,7 @@ class VisualsNode(Thread, Node):
 
         # ------------------------------------------
         # Services
+        # Service for recording video
         self.is_recording = False
         self.current_routine = 0
         self.last_recorded_time = time.time()
@@ -140,7 +141,7 @@ class VisualsNode(Thread, Node):
             qos_profile=1,
             callback_group=self.callback_group,
         )
-
+        # Publisher for canceling the routine
         self.msg_cancel_routine = Bool()
         self.pub_cancel_routine = self.create_publisher(
             msg_type=Bool,
@@ -148,7 +149,7 @@ class VisualsNode(Thread, Node):
             qos_profile=1,
             callback_group=self.callback_group,
         )
-
+        # Publisher for pausing the routine
         self.msg_pause_routine = Bool()
         self.pub_pause_routine = self.create_publisher(
             msg_type=Bool,
@@ -349,7 +350,6 @@ class VisualsNode(Thread, Node):
 
         # Get image shape
         rows, cols, _ = self._kiwibot_img.shape
-        printlog("rotated image to angle" + str(heading_angle))
 
         # Calculate translation and rotation matrix
         M = cv2.getRotationMatrix2D(

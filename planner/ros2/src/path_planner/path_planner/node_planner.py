@@ -137,7 +137,7 @@ class PlannerNode(Node):
             qos_profile=qos_profile_sensor_data,
             callback_group=self.callback_group,
         )
-
+        # Subscriber for cancelling routines
         self.is_cancelled = False
         self.sub_cancel_routine = self.create_subscription(
             msg_type=Bool,
@@ -173,7 +173,7 @@ class PlannerNode(Node):
         # service client to move the robot
         self.cli_robot_move = self.create_client(Move, "/robot/move")
 
-        # service client to move the robot
+        # service client to record the video
         self.cli_record_video = self.create_client(SetBool, "/graphics/record_video")
         self.record_video_req = SetBool.Request()
 
@@ -608,6 +608,7 @@ class PlannerNode(Node):
             final_accelerated_time = 0
             final_const_yaw = 0
             final_const_time = 0
+            # formulas from the kinematic equation yaw(t) = yaw0 + omega*t + 1/2 alpha*t**2
             for i in range(int(n)):
                 current_time += dt
                 if (i + 1) <= n * pt:
