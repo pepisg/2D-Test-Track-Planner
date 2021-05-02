@@ -162,9 +162,9 @@ void *Speaker::PlaySound()
    /********************************************
     * END CODE 
    ********************************************/
-
     while (readval = (read(readfd, buff, buff_size) > 0))
     {
+        
         if (pcm = snd_pcm_writei(pcm_handle, buff, frames) == -EPIPE)
         {
             snd_pcm_prepare(pcm_handle);

@@ -28,6 +28,8 @@ from std_msgs.msg import Int32
 from std_msgs.msg import Int8
 from std_msgs.msg import Bool
 
+from std_srvs.srv import SetBool
+
 
 from utils.python_utils import printlog
 
@@ -136,6 +138,15 @@ class PlannerNode(Node):
             callback_group=self.callback_group,
         )
 
+        self.is_cancelled = False
+        self.sub_cancel_routine = self.create_subscription(
+            msg_type=Bool,
+            topic="/graphics/cancel_routine",
+            callback=self.cb_cancel_routine,
+            qos_profile=qos_profile_sensor_data,
+            callback_group=self.callback_group,
+        )
+
         # ---------------------------------------------------------------------
         # Publishers
 
@@ -162,14 +173,9 @@ class PlannerNode(Node):
         # service client to move the robot
         self.cli_robot_move = self.create_client(Move, "/robot/move")
 
-        self.is_cancelled = False
-        self.sub_cancel_routine = self.create_subscription(
-            msg_type=Bool,
-            topic="/graphics/cancel_routine",
-            callback=self.cb_cancel_routine,
-            qos_profile=qos_profile_sensor_data,
-            callback_group=self.callback_group,
-        )
+        # service client to move the robot
+        self.cli_record_video = self.create_client(SetBool, "/graphics/record_video")
+        self.record_video_req = SetBool.Request()
 
         try:
             self.robot_turn_req = Turn.Request()
@@ -213,6 +219,8 @@ class PlannerNode(Node):
             msg: `Int32` number of routine to load waypoint from landmarks
         Returns:
         """
+        self.record_video_req.data = True
+        self.cli_record_video.call(self.record_video_req)
 
         try:
 
@@ -365,13 +373,14 @@ class PlannerNode(Node):
                         msg=f"routine {msg.data} has finished",
                         msg_type="OKGREEN",
                     )
+                self.record_video_req.data = False
+                self.cli_record_video.call(self.record_video_req)
 
                 # -------------------------------------------------------
                 if self.is_cancelled:
                     self.is_cancelled = False
                 else:
                     self.pub_speaker.publish(Int8(data=3))
-
             else:
                 printlog(
                     msg=f"routine {msg.data} does not exit",

@@ -14,6 +14,7 @@ import cv2
 import copy
 import sys
 import os
+from datetime import datetime
 import time
 
 from threading import Thread, Event
@@ -86,6 +87,8 @@ class VisualsNode(Thread, Node):
         self._kiwibot_img_path = "/workspace/planner/media/images/kiwibot.png"
         self._kiwibot_img = cv2.imread(self._kiwibot_img_path, cv2.IMREAD_UNCHANGED)
 
+        self.img_array = []
+
         # ---------------------------------------------------------------------
         # Subscribers
 
@@ -110,6 +113,16 @@ class VisualsNode(Thread, Node):
         self.yaw_changed = False
 
         # ------------------------------------------
+        # Services
+        self.is_recording = False
+        self.current_routine = 0
+        self.last_recorded_time = time.time()
+        self.srv_record_video = self.create_service(
+            SetBool,
+            "/graphics/record_video",
+            self.cb_record_video,
+            callback_group=self.callback_group,
+        )
 
         self.turn_robot(heading_angle=float(os.getenv("BOT_INITIAL_YAW", default=0.0)))
         self.msg_kiwibot.pos_x = int(os.getenv("BOT_INITIAL_X", default=917))
@@ -227,6 +240,13 @@ class VisualsNode(Thread, Node):
                 msg="{}, {}, {}, {}".format(e, exc_type, fname, exc_tb.tb_lineno),
                 msg_type="ERROR",
             )
+
+    def cb_record_video(self, request, response) -> SetBool:
+        printlog("record callback")
+        self.is_recording = request.data
+        response.message = ""
+        response.success = True
+        return response
 
     def crop_map(self, coord: tuple, draw_path: bool = True):
         """
@@ -464,6 +484,31 @@ class VisualsNode(Thread, Node):
 
         # -----------------------------------------
 
+    def write_video(self, images):
+
+        now = datetime.now()
+        filename = (
+            "/workspace/planner/media/video/routine_"
+            + self.current_routine
+            + now.strftime("_%Y_%m_%d_%H_%M_%S")
+            + ".avi"
+        )
+        printlog("writing video " + filename)
+        h, w, _ = images[-1].shape
+        out = cv2.VideoWriter(
+            filename, cv2.VideoWriter_fourcc("M", "J", "P", "G"), 10.0, (w, h)
+        )
+        printlog("writing " + str(len(images)) + " frames" + str((w, h)))
+        try:
+            for i in images:
+                printlog(i.shape)
+                out.write(np.uint8(i))
+            out.release()
+        except Exception as e:
+            printlog(e)
+
+        printlog("done")
+
     def run(self) -> None:
         """
             Callback to update & draw window components
@@ -523,6 +568,15 @@ class VisualsNode(Thread, Node):
                 cv2.imshow(self._win_name, win_img)
                 key = cv2.waitKey(self._win_time)
 
+                # tried to solve the video recording. however having trouble with the codec and ram usage
+                # if self.is_recording:
+                #     if time.time() - self.last_recorded_time > 0.1:
+                #         self.img_array.append(np.uint8(win_img))
+                #         self.last_recorded_time = time.time()
+                # elif len(self.img_array) > 0:
+                #     # self.write_video(self.img_array)
+                #     self.img_array = []
+
                 # No key
                 if key == -1:
                     continue
@@ -533,6 +587,7 @@ class VisualsNode(Thread, Node):
                     #     msg_type="WARN",
                     # )
                     # continue  # remove this line
+                    self.current_routine = chr(key)
                     printlog(
                         msg=f"Routine {chr(key)} was sent to path planner node",
                         msg_type="INFO",
