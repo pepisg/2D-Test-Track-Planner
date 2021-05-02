@@ -135,19 +135,36 @@ Respond below every questions:
 
 1. [Python] Why the robot's image gets distorted when is turning?
 
+Because the method that is used to turn the robot rotates the same kiwibot image successively without reading the file again for each rotation but rather rotating again the image that had been previously rotated. Each cv2.warpAffine operation causes a little distortion, but when run successively on the same image this distortion accumulates and becomes really evident. 
+
 2. [Python] what is `ReentrantCallbackGroup()` in the python nodes with you own words, give an common life example, and what happen if is not used?
+
+Is a class included in the rclpy client library that allows callback functions from nodes and services to be executed in separate threads simultaneously, even with themselves. That means that the same callback function can running twice or more times at the same moment. 
+This is useful because callback functions often process lots of information from sensors like cameras and LIDARs. It can happen that for instance a camera produces a new frame before the ROS2 node that receives it has finished processing the previous frame. In that case the data can't be lost and the program cannot be blocked (this is wat would happen if a reentrant callback group was not used), so it has to allow the callback function to be called again even if the previous call hasn't finished yet.
 
 3. [Python] are Python packages compiled as C++ packages?
 
+No. Python remains an interpreted language even when used by ROS2. When a python package is compiled its .py files containing the nodes are copied to the build folder, but unlike c++ files that are compiled into an executable in assembly code they still need the python interpreter to run.
+
 4. [Python] Why with some code errors in some nodes the logs are not printed?
+Because 
+
+Because the logging verbosity is left by default in the INFO level, which means that the logs marked as DEBUG are not printed or saved in the log files.
 
 5. [Control] What other turn or speed profile would you implement, why, and what are the benefits?
 
+A fifth order trajectory could be implemented. The main benefit of this trajectory is that, in a real robot with real inertia it produces a smoother movement, as it allows to control de values of position, velocity and acceleration freely and makes the jerk (time derivative of the acceleration) have finite values all the time. This does not happen in a trapezoidal profile, because as the trapezoid corresponds to the speed vs time, the acceleration vs time looks like two rectangles and the jerk vs time tends to infinity on the edges of this rectangle, which in the real world causes the robot to have a ["jerky"](https://www.youtube.com/watch?v=hvT1b8Pj4pQ) behavior (thus the name jerk). In the fifth order trajectory the velocity is a fourth order polynomial, the acceleration a third order polynomial and the jerk a second order polynomial; thats why it is possible to have finite values of jerk for a finite time.
+
 6. [C++] What is the mean of the number "15" used in the pthread_kill inside the destructor method?
+
+Because this send to the process a SIGTERM signal that can be received and used to free al the resources (specially taking into account that the c++ blocks the audio device on the computer) before exiting. Other stronger signals like SIGKILL would end the process directly in the kernel, which can freeze the resources and force a complete reboot to free them.
 
 7. [C++] Why are we using UniquePointer instead of SharedPointers to publish a ROS2 message?
 
+
 8. [C++] Why are we using a m_multi_sound variable? Explain ...
+
+To pause the reproduction of the ambient song when a different track is requested by an /device/speaker/command message. If this didn't happen the audio device would be forced to play two sounds at the same time, but this probably would not be possible as the computer has just one audio adapter (this could lead to unpredictable behavior or the computer exploding)
 
 9. [C++] Why are we freeing the memory allocated by raw pointer "buff" variable and not freeing the memory allocated by the Shared and Unique Pointers? (HARD)
 
